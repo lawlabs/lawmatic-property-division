@@ -80,6 +80,61 @@
           }
         }
       }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "jurisdiction" } } },
+      "then": {
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim_price"],
+            "properties": { "claim_price": { "type": "number", "minimum": 0 } }
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["jurisdiction"],
+            "properties": { "jurisdiction": { "type": "string", "enum": ["magistrate", "district"] } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "deadlines" } } },
+      "then": {
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "as_of"],
+            "properties": {
+              "case": { "$ref": "marital-property.v2.schema.json" },
+              "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+            }
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["items"],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["code"],
+                  "properties": {
+                    "code": { "type": "string" },
+                    "date": { "type": ["string", "null"] },
+                    "level": { "type": ["string", "null"], "enum": ["info", "warning", "critical", "expired", null] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {

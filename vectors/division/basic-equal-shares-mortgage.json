@@ -110,6 +110,9 @@
       "net": { "wife": 8500000, "husband": 500000 }
     },
     "unallocated": 0,
-    "compensation": { "from": "wife", "to": "husband", "amount": 4000000 }
+    "compensation": { "from": "wife", "to": "husband", "amount": 4000000 },
+    "claim_price": 6000000,
+    "court_fee": 66000,
+    "jurisdiction": "district"
   }
 }

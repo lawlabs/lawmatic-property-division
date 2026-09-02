@@ -1,0 +1,11 @@
+{
+  "id": "jurisdiction/magistrate-at-limit",
+  "title": "Цена иска 50 000 ₽ — мировой судья",
+  "description": "Порог п. 3 ч. 1 ст. 23 ГПК РФ включительно: 50 000 ₽ и меньше — мировой судья.",
+  "legal_basis": ["п. 3 ч. 1 ст. 23 ГПК РФ"],
+  "kind": "jurisdiction",
+  "status": "draft",
+  "source_note": "Порог из ГПК РФ.",
+  "input": { "claim_price": 50000 },
+  "expected": { "jurisdiction": "magistrate" }
+}

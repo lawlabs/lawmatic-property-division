@@ -1,0 +1,54 @@
+{
+  "id": "deadlines/limitation-from-violation",
+  "title": "Исковая давность — три года с даты нарушения, не раньше развода",
+  "description": "Развод 15.09.2024, о нарушении узнали 01.10.2024. Срок — 01.10.2027. На 02.09.2026 остаётся больше 90 дней (info). Сделка без согласия 01.06.2025 — годичный срок истёк к 02.09.2026.",
+  "legal_basis": [
+    "п. 7 ст. 38 СК РФ",
+    "п. 19 Постановления Пленума ВС РФ от 05.11.1998 № 15",
+    "п. 3 ст. 35 СК РФ"
+  ],
+  "kind": "deadlines",
+  "status": "draft",
+  "source_note": "Синтетические даты.",
+  "input": {
+    "as_of": "2026-09-02",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2015-01-01" },
+        "separated_at": "2024-03-01",
+        "dissolved_at": "2024-09-15",
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "wife", "plaintiff": "wife" },
+        "children": [],
+        "limitation": { "violation_known_at": "2024-10-01", "override_deadline": null, "note": null }
+      },
+      "assets": [
+        {
+          "id": "a-sold",
+          "kind": "vehicle",
+          "title": "Отчуждённый автомобиль",
+          "title_holder": "third_party",
+          "disposed": { "at": "2025-06-01", "by": "husband", "spouse_consent": false },
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-1", "type": "market_reference", "amount": 1000000, "currency": "RUB" }
+          ]
+        }
+      ],
+      "liabilities": [],
+      "scenarios": []
+    }
+  },
+  "expected": {
+    "items": [
+      { "code": "deadline.limitation", "date": "2027-10-01", "level": "info" },
+      { "code": "deadline.disposal_challenge", "date": "2026-06-01", "level": "expired" }
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "division/maternity-capital-one-child",
+  "title": "Квартира с материнским капиталом, один ребёнок, равные доли супругов",
+  "description": "Квартира 4 000 000 ₽ куплена в браке: 3 550 000 ₽ общие средства и 450 000 ₽ материнский капитал. Семья из трёх человек. Доля детей в объекте = (450 000 / 4 000 000) × (1 / 3) = 0,0375. Общая часть супругов 3 850 000 ₽ передаётся супруге. Формула долей детей — черновик, требует подтверждения по п. 13 Обзора ВС РФ от 22.06.2016.",
+  "legal_basis": [
+    "ч. 4 ст. 10 ФЗ № 256-ФЗ",
+    "п. 13 Обзора судебной практики ВС РФ от 22.06.2016"
+  ],
+  "kind": "division",
+  "status": "draft",
+  "source_note": "Синтетический кейс. Формула долей детей помечена в SPEC § 4.1 как требующая подтверждения юристом.",
+  "input": {
+    "scenario_id": "s-claim",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2014-05-01" },
+        "separated_at": "2024-01-10",
+        "dissolved_at": "2024-08-20",
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "wife", "plaintiff": "wife" },
+        "children": [{ "id": "c-1", "name": "Ребёнок" }]
+      },
+      "assets": [
+        {
+          "id": "a-flat",
+          "kind": "apartment",
+          "title": "Квартира",
+          "title_holder": "joint",
+          "acquired_at": "2018-03-01",
+          "acquisition_price": 4000000,
+          "funding": { "common": 3550000, "maternity_capital": 450000 },
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-flat", "type": "appraiser", "amount": 4000000, "currency": "RUB", "valued_at": "2025-03-01" }
+          ]
+        }
+      ],
+      "liabilities": [],
+      "scenarios": [
+        {
+          "id": "s-claim",
+          "title": "Иск супруги",
+          "kind": "claim",
+          "is_primary": true,
+          "wife_share": 0.5,
+          "valuation_policy": "per_item",
+          "asset_items": [
+            { "asset_id": "a-flat", "include": true, "valuation_id": "v-flat", "assigned_to": "wife" }
+          ],
+          "liability_items": [],
+          "claim": { "plaintiff": "wife", "plaintiff_type": "individual" }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "mass": { "assets_common": 3850000, "liabilities_common": 0, "net": 3850000 },
+    "ideal": { "wife": 1925000, "husband": 1925000 },
+    "received": {
+      "assets": { "wife": 3850000, "husband": 0 },
+      "liabilities": { "wife": 0, "husband": 0 },
+      "net": { "wife": 3850000, "husband": 0 }
+    },
+    "unallocated": 0,
+    "compensation": { "from": "wife", "to": "husband", "amount": 1925000 },
+    "warnings": ["asset.maternity_capital_children_share"]
+  }
+}

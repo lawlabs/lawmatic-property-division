@@ -1,0 +1,88 @@
+{
+  "id": "division/unproven-family-debt",
+  "title": "Долг включён в раздел, но расходование на нужды семьи не доказано",
+  "description": "Квартира 2 000 000 ₽ супруге. Потребительский кредит 400 000 ₽ сценарий считает общим (treat_as_common), статус family_purpose = not_claimed. Движок делит долг, но обязан предупредить: презумпции общности нет.",
+  "legal_basis": [
+    "п. 2 ст. 45 СК РФ",
+    "п. 5 Обзора судебной практики ВС РФ № 1 (2016)"
+  ],
+  "kind": "division",
+  "status": "draft",
+  "source_note": "Синтетический кейс на предупреждение, не на отказ включить долг.",
+  "input": {
+    "scenario_id": "s-claim",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2016-01-01" },
+        "separated_at": "2023-09-01",
+        "dissolved_at": "2024-02-01",
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "wife", "plaintiff": "wife" },
+        "children": []
+      },
+      "assets": [
+        {
+          "id": "a-flat",
+          "kind": "apartment",
+          "title": "Квартира",
+          "title_holder": "wife",
+          "acquired_at": "2018-01-01",
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-flat", "type": "appraiser", "amount": 2000000, "currency": "RUB" }
+          ]
+        }
+      ],
+      "liabilities": [
+        {
+          "id": "l-loan",
+          "kind": "consumer_loan",
+          "title": "Потребительский кредит",
+          "borrower": "husband",
+          "outstanding": { "amount": 400000, "at": "2024-02-01" },
+          "currency": "RUB",
+          "family_purpose": { "status": "not_claimed" },
+          "positions": {
+            "wife": { "position": "disputed" },
+            "husband": { "position": "personal_husband" }
+          }
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "s-claim",
+          "title": "Иск",
+          "kind": "claim",
+          "is_primary": true,
+          "wife_share": 0.5,
+          "valuation_policy": "per_item",
+          "asset_items": [
+            { "asset_id": "a-flat", "include": true, "valuation_id": "v-flat", "assigned_to": "wife" }
+          ],
+          "liability_items": [
+            { "liability_id": "l-loan", "include": true, "treat_as_common": true, "allocation": "proportional" }
+          ],
+          "claim": { "plaintiff": "wife" }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "mass": { "assets_common": 2000000, "liabilities_common": 400000, "net": 1600000 },
+    "ideal": { "wife": 800000, "husband": 800000 },
+    "received": {
+      "assets": { "wife": 2000000, "husband": 0 },
+      "liabilities": { "wife": 200000, "husband": 200000 },
+      "net": { "wife": 1800000, "husband": -200000 }
+    },
+    "unallocated": 0,
+    "compensation": { "from": "wife", "to": "husband", "amount": 1000000 },
+    "warnings": ["liability.family_purpose_not_proven"]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "jurisdiction/district-above-limit",
+  "title": "Цена иска 50 001 ₽ — районный суд",
+  "description": "Свыше 50 000 ₽ — районный (городской) суд.",
+  "legal_basis": ["п. 3 ч. 1 ст. 23 ГПК РФ"],
+  "kind": "jurisdiction",
+  "status": "draft",
+  "source_note": "Порог из ГПК РФ.",
+  "input": { "claim_price": 50001 },
+  "expected": { "jurisdiction": "district" }
+}

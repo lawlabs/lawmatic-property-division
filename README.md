@@ -15,7 +15,8 @@
 | [`schema/vector.schema.json`](schema/vector.schema.json) | Формат тест‑векторов |
 | [`vectors/`](vectors/) | Тест‑векторы «вход → ожидаемый результат»: раздел, госпошлина; далее — цена иска, сроки, подсудность, предупреждения |
 | [`legal/ru-rules.md`](legal/ru-rules.md) | Правовые правила РФ (СК, ГК, ГПК, НК РФ, практика ВС РФ) с привязкой к поведению движка и кодам предупреждений |
-| [`engines/`](engines/) | Референсные реализации движка: TypeScript и Swift (в работе) |
+| [`engines/ts`](engines/ts/) | Референсный движок TypeScript (`divide`, `courtFee`, `jurisdiction`, `deadlines`) и тесты на векторах |
+| [`engines/swift`](engines/) | Swift-пакет `DivorceCore` — следующий шаг |
 
 ## Почему отдельная спецификация
 
@@ -31,13 +32,14 @@
 npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/marital-property.v2.schema.json -d my-case.json
 ```
 
-**Проверка векторов** (то же, что делает CI):
+**Проверка векторов и движка:**
 
 ```bash
+npm test --prefix engines/ts
 npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json -d "vectors/**/*.json"
 ```
 
-**Реализация движка**: прочитать `SPEC.md` § 4, реализовать функции над документом, прогнать все файлы из `vectors/` (допуск 0,01 ₽). Референсные реализации появятся в `engines/ts` (npm‑пакет) и `engines/swift` (SwiftPM‑пакет `DivorceCore`).
+**Реализация на другой платформе:** прочитать `SPEC.md` § 4 и повторить функции так, чтобы все файлы из `vectors/` проходили с допуском 0,01 ₽. TypeScript уже есть в `engines/ts`; Swift (`DivorceCore`) — следующий шаг.
 
 ## Правила репозитория
 
@@ -48,8 +50,8 @@ npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/vector.schema.json -r sc
 
 ## Дорожная карта
 
-1. 2.0.0‑alpha — схема, формат векторов, первые векторы (сейчас).
-2. 2.0.0‑beta — подтверждённые формулы маткапитала и цены иска, ≥ 30 векторов, движки TS и Swift проходят их в CI.
+1. 2.0.0‑alpha — схема, векторы, движок TypeScript (сейчас).
+2. 2.0.0‑beta — подтверждённые формулы маткапитала и цены иска, ≥ 30 векторов, движок Swift, CI гоняет оба.
 3. 2.0.0 — все векторы `confirmed`, интеграция в LawMatic Divorce и Legalic.
 4. 2.1 — структура документов (иск, опись имущества, расчёт цены иска и пошлины, соглашение о разделе), раздел «клиентская анкета → документ».
 5. 3.x — другие правовые режимы.

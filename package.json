@@ -1,0 +1,9 @@
+{
+  "name": "lawmatic-property-division",
+  "private": true,
+  "description": "Спецификация и референсный движок раздела общего имущества супругов",
+  "scripts": {
+    "test": "npm test --prefix engines/ts",
+    "validate": "npx --yes ajv-cli@5 compile --spec=draft2020 -s schema/marital-property.v2.schema.json && npx --yes ajv-cli@5 compile --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json && npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json -d \"vectors/**/*.json\""
+  }
+}

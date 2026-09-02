@@ -1,0 +1,108 @@
+{
+  "id": "division/llc-share-and-fx-debt",
+  "title": "Доля в ООО супругу, квартира супруге, общий долг в иностранной валюте",
+  "description": "Обезличенный сценарий по мотивам типичного иска: квартира 10 000 000 ₽ супруге, доля в ООО 250 000 ₽ супругу, общий долг 10 000 единиц иностранной валюты по курсу 75 = 750 000 ₽, пропорционально долям. Проверяет конвертацию валюты долга и предупреждение про устав ООО.",
+  "legal_basis": [
+    "ст. 34, 39 СК РФ",
+    "ст. 317 ГК РФ — валюта обязательства",
+    "Определение СКЭС ВС РФ от 30.03.2023 № 304-ЭС22-20237 — стоимость доли, а не корпоративные права"
+  ],
+  "kind": "division",
+  "status": "draft",
+  "source_note": "Синтетические суммы. Реквизиты компаний, адреса и ФИО не используются.",
+  "input": {
+    "scenario_id": "s-claim",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2008-10-10" },
+        "separated_at": "2024-07-01",
+        "dissolved_at": null,
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "husband", "plaintiff": "husband" },
+        "children": []
+      },
+      "assets": [
+        {
+          "id": "a-flat",
+          "kind": "apartment",
+          "title": "Квартира",
+          "title_holder": "husband",
+          "acquired_at": "2017-12-26",
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-flat", "type": "appraiser", "amount": 10000000, "currency": "RUB" }
+          ]
+        },
+        {
+          "id": "a-llc",
+          "kind": "business_share",
+          "title": "Доля в уставном капитале ООО",
+          "title_holder": "husband",
+          "acquired_at": "2021-07-26",
+          "identifiers": { "share_pct": 100 },
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-llc", "type": "appraiser", "amount": 250000, "currency": "RUB" }
+          ]
+        }
+      ],
+      "liabilities": [
+        {
+          "id": "l-fx",
+          "kind": "private_loan",
+          "title": "Заём в иностранной валюте",
+          "borrower": "husband",
+          "outstanding": { "amount": 10000, "at": "2025-01-01" },
+          "currency": "SGD",
+          "fx_rate": 75,
+          "fx_date": "2025-01-01",
+          "family_purpose": { "status": "proven" },
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          }
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "s-claim",
+          "title": "Иск супруга",
+          "kind": "claim",
+          "is_primary": true,
+          "wife_share": 0.5,
+          "valuation_policy": "per_item",
+          "asset_items": [
+            { "asset_id": "a-flat", "include": true, "valuation_id": "v-flat", "assigned_to": "wife" },
+            { "asset_id": "a-llc", "include": true, "valuation_id": "v-llc", "assigned_to": "husband" }
+          ],
+          "liability_items": [
+            { "liability_id": "l-fx", "include": true, "treat_as_common": true, "allocation": "proportional" }
+          ],
+          "claim": { "plaintiff": "husband", "divorce_claimed": true, "plaintiff_type": "individual" }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "mass": { "assets_common": 10250000, "liabilities_common": 750000, "net": 9500000 },
+    "ideal": { "wife": 4750000, "husband": 4750000 },
+    "received": {
+      "assets": { "wife": 10000000, "husband": 250000 },
+      "liabilities": { "wife": 375000, "husband": 375000 },
+      "net": { "wife": 9625000, "husband": -125000 }
+    },
+    "unallocated": 0,
+    "compensation": { "from": "wife", "to": "husband", "amount": 4875000 },
+    "claim_price": 5125000,
+    "warnings": ["business.charter_consent_required"]
+  }
+}
