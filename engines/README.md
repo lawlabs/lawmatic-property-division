@@ -3,7 +3,7 @@
 ```
 engines/
   ts/       npm-пакет @lawlabs/marital-property — типы, движок SPEC § 4, тесты на vectors/
-  swift/    SwiftPM-пакет DivorceCore — в работе (Этап 1, после стабилизации TS)
+  swift/    SwiftPM-пакет DivorceCore — те же функции и те же векторы
 ```
 
 Требования к обеим реализациям:

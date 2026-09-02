@@ -31,3 +31,10 @@ jobs:
         run: |
           npm install --prefix engines/ts
           npm test --prefix engines/ts
+
+  swift-engine:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift engine tests
+        run: swift test --package-path engines/swift

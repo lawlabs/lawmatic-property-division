@@ -16,7 +16,7 @@
 | [`vectors/`](vectors/) | Тест‑векторы «вход → ожидаемый результат»: раздел, госпошлина; далее — цена иска, сроки, подсудность, предупреждения |
 | [`legal/ru-rules.md`](legal/ru-rules.md) | Правовые правила РФ (СК, ГК, ГПК, НК РФ, практика ВС РФ) с привязкой к поведению движка и кодам предупреждений |
 | [`engines/ts`](engines/ts/) | Референсный движок TypeScript (`divide`, `courtFee`, `jurisdiction`, `deadlines`) и тесты на векторах |
-| [`engines/swift`](engines/) | Swift-пакет `DivorceCore` — следующий шаг |
+| [`engines/swift`](engines/swift) | Swift-пакет `DivorceCore` (`divide`, `courtFee`, `jurisdiction`, `deadlines`) и тесты на векторах |
 
 ## Почему отдельная спецификация
 
@@ -36,10 +36,11 @@ npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/marital-property.v2.sche
 
 ```bash
 npm test --prefix engines/ts
+swift test --package-path engines/swift
 npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json -d "vectors/**/*.json"
 ```
 
-**Реализация на другой платформе:** прочитать `SPEC.md` § 4 и повторить функции так, чтобы все файлы из `vectors/` проходили с допуском 0,01 ₽. TypeScript уже есть в `engines/ts`; Swift (`DivorceCore`) — следующий шаг.
+**Реализация на другой платформе:** прочитать `SPEC.md` § 4 и повторить функции так, чтобы все файлы из `vectors/` проходили с допуском 0,01 ₽. Референс — `engines/ts` и `engines/swift`.
 
 ## Правила репозитория
 
