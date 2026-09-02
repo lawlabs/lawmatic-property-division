@@ -1,0 +1,33 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  schema-and-vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Compile schemas
+        run: |
+          npx --yes ajv-cli@5 compile --spec=draft2020 -s schema/marital-property.v2.schema.json
+          npx --yes ajv-cli@5 compile --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json
+      - name: Validate vectors
+        run: |
+          npx --yes ajv-cli@5 validate --spec=draft2020 -s schema/vector.schema.json -r schema/marital-property.v2.schema.json -d "vectors/**/*.json" --errors=text
+      - name: Vector ids match file paths
+        run: |
+          set -e
+          for f in $(find vectors -name '*.json'); do
+            expected="${f#vectors/}"; expected="${expected%.json}"
+            actual=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$f','utf8')).id)")
+            if [ "$expected" != "$actual" ]; then echo "id mismatch in $f: $actual != $expected"; exit 1; fi
+          done
+      - name: Engine tests
+        run: |
+          npm install --prefix engines/ts
+          npm test --prefix engines/ts
