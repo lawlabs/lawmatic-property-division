@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lawlabs.github.io/lawmatic-property-division/schema/vector.schema.json",
+  "title": "Test vector",
+  "description": "Тест-вектор «вход → ожидаемый результат». Каждая реализация движка (TypeScript, Swift) обязана проходить все векторы из vectors/**.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "kind", "status", "input", "expected"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_-]+/[a-z0-9_-]+$", "description": "Совпадает с путём файла без расширения: <категория>/<имя>" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "legal_basis": { "type": "array", "items": { "type": "string" } },
+    "kind": { "type": "string", "enum": ["division", "court_fee", "claim_price", "deadlines", "jurisdiction", "warnings", "roundtrip"] },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "confirmed"],
+      "description": "confirmed — ожидаемые значения проверены практикующим юристом / официальным калькулятором"
+    },
+    "source_note": { "type": "string", "description": "Откуда взят кейс (обезличенно) и чем проверен" },
+    "input": { "type": "object" },
+    "expected": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "division" } } },
+      "then": {
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "scenario_id"],
+            "properties": {
+              "case": { "$ref": "marital-property.v2.schema.json" },
+              "scenario_id": { "type": "string" }
+            }
+          },
+          "expected": { "$ref": "#/$defs/DivisionExpected" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "court_fee" } } },
+      "then": {
+        "properties": {
+          "input": { "$ref": "#/$defs/CourtFeeInput" },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["court_fee"],
+            "properties": {
+              "court_fee": { "type": "number", "minimum": 0 },
+              "breakdown": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["item", "amount"],
+                  "properties": {
+                    "item": { "type": "string", "enum": ["property_claim", "property_claim_fixed", "divorce", "injunction", "appeal", "cassation", "supreme_court"] },
+                    "amount": { "type": "number", "minimum": 0 },
+                    "basis": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "roundtrip" } } },
+      "then": {
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case"],
+            "properties": { "case": { "$ref": "marital-property.v2.schema.json" } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "CourtFeeInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_price"],
+      "properties": {
+        "claim_price": { "type": "number", "minimum": 0, "description": "Цена иска в рублях (ст. 91 ГПК РФ)" },
+        "filed_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Дата подачи; по умолчанию — сегодня. Шкала ред. 259-ФЗ действует для заявлений с 09.09.2024" },
+        "plaintiff_type": { "type": "string", "enum": ["individual", "organization"], "default": "individual" },
+        "divorce_claimed": { "type": "boolean", "default": false },
+        "prior_right_established": { "type": "boolean", "default": false },
+        "injunction_requested": { "type": "boolean", "default": false },
+        "stage": { "type": "string", "enum": ["first_instance", "appeal", "cassation", "supreme_court"], "default": "first_instance" }
+      }
+    },
+    "SideAmounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wife", "husband"],
+      "properties": {
+        "wife": { "type": "number" },
+        "husband": { "type": "number" }
+      }
+    },
+    "DivisionExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mass", "ideal", "received", "compensation"],
+      "properties": {
+        "mass": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assets_common", "liabilities_common", "net"],
+          "properties": {
+            "assets_common": { "type": "number", "description": "Сумма общей части включённых активов (после вычета личных долей и долей детей, с учётом add-back)" },
+            "liabilities_common": { "type": "number", "description": "Сумма общих долгов, включённых в раздел" },
+            "net": { "type": "number", "description": "assets_common − liabilities_common" }
+          }
+        },
+        "ideal": { "$ref": "#/$defs/SideAmounts", "description": "Идеальные доли: net × доля стороны" },
+        "received": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assets", "liabilities", "net"],
+          "properties": {
+            "assets": { "$ref": "#/$defs/SideAmounts" },
+            "liabilities": { "$ref": "#/$defs/SideAmounts" },
+            "net": { "$ref": "#/$defs/SideAmounts" }
+          }
+        },
+        "unallocated": { "type": "number", "description": "Общая часть включённых активов без назначения (assigned_to = null/court)" },
+        "compensation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to", "amount"],
+          "properties": {
+            "from": { "type": ["string", "null"], "enum": ["wife", "husband", null] },
+            "to": { "type": ["string", "null"], "enum": ["wife", "husband", null] },
+            "amount": { "type": "number", "minimum": 0 }
+          }
+        },
+        "claim_price": { "type": ["number", "null"] },
+        "court_fee": { "type": ["number", "null"] },
+        "jurisdiction": { "type": ["string", "null"], "enum": ["magistrate", "district", null] },
+        "warnings": { "type": "array", "items": { "type": "string" }, "description": "Коды предупреждений, которые движок обязан выдать (порядок не важен)" }
+      }
+    }
+  }
+}

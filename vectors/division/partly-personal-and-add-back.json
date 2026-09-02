@@ -1,0 +1,91 @@
+{
+  "id": "division/partly-personal-and-add-back",
+  "title": "Личные вложения супруги в дом и отчуждённый супругом автомобиль (add-back)",
+  "description": "Дом куплен в браке за 6 000 000 ₽: 1 500 000 ₽ — личные средства супруги (от продажи добрачной квартиры, доказано), 4 500 000 ₽ — общие. Доля личных вложений 1/4, общая часть текущей оценки 8 000 000 ₽ = 6 000 000 ₽. Автомобиль продан супругом после разъезда без согласия супруги за 1 500 000 ₽; в сценарии учитывается по рыночной оценке 2 000 000 ₽ за отчуждателем (add-back). Долгов нет. Проверяет частично личное имущество и учёт отчуждённого.",
+  "legal_basis": [
+    "ст. 36 СК РФ — имущество, приобретённое на личные средства",
+    "п. 16 Постановления Пленума ВС РФ от 05.11.1998 № 15 — учёт отчуждённого вопреки воле супруга имущества или его стоимости",
+    "п. 15 Постановления Пленума ВС РФ № 15 — стоимость на время рассмотрения дела"
+  ],
+  "kind": "division",
+  "status": "draft",
+  "source_note": "Синтетический кейс по мотивам типичной практики. Ожидаемые значения рассчитаны вручную, требуют подтверждения юристом. Личная часть дома (2 000 000 ₽) вне раздела и в received не входит.",
+  "input": {
+    "scenario_id": "s-claim",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2012-02-14" },
+        "separated_at": "2023-11-01",
+        "dissolved_at": "2024-04-10",
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "wife", "plaintiff": "wife" },
+        "children": []
+      },
+      "assets": [
+        {
+          "id": "a-house",
+          "kind": "house",
+          "title": "Жилой дом",
+          "title_holder": "joint",
+          "acquired_at": "2016-08-01",
+          "acquisition_price": 6000000,
+          "funding": { "common": 4500000, "personal_wife": 1500000, "note": "Личные средства — от продажи добрачной квартиры супруги, выписки по счёту" },
+          "positions": {
+            "wife": { "position": "partly_personal", "claimed_personal_share": 0.25, "ground": "1 500 000 ₽ внесены из личных средств (ст. 36 СК РФ)" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-house-appraiser", "type": "appraiser", "amount": 8000000, "currency": "RUB", "valued_at": "2025-02-01" }
+          ]
+        },
+        {
+          "id": "a-car",
+          "kind": "vehicle",
+          "title": "Автомобиль",
+          "title_holder": "third_party",
+          "acquired_at": "2020-05-20",
+          "disposed": { "at": "2024-01-15", "by": "husband", "price": 1500000, "spouse_consent": false, "proceeds_use": "personal" },
+          "positions": {
+            "wife": { "position": "common", "ground": "куплен в браке на общие средства, продан без согласия после разъезда" },
+            "husband": { "position": "personal_husband", "ground": "куплен на личные средства" }
+          },
+          "valuations": [
+            { "id": "v-car-market", "type": "party_wife", "amount": 2000000, "currency": "RUB", "valued_at": "2025-02-01", "source": "средняя рыночная цена по объявлениям" },
+            { "id": "v-car-sale", "type": "sale_price", "amount": 1500000, "currency": "RUB", "valued_at": "2024-01-15" }
+          ]
+        }
+      ],
+      "liabilities": [],
+      "scenarios": [
+        {
+          "id": "s-claim",
+          "title": "Иск супруги",
+          "kind": "claim",
+          "is_primary": true,
+          "wife_share": 0.5,
+          "valuation_policy": "per_item",
+          "asset_items": [
+            { "asset_id": "a-house", "include": true, "valuation_id": "v-house-appraiser", "accepted_position": "partly_personal", "personal_share_override": 0.25, "assigned_to": "wife" },
+            { "asset_id": "a-car", "include": true, "valuation_id": "v-car-market", "accepted_position": "common", "add_back": true, "assigned_to": "husband" }
+          ],
+          "liability_items": [],
+          "claim": { "plaintiff": "wife", "plaintiff_type": "individual" }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "mass": { "assets_common": 8000000, "liabilities_common": 0, "net": 8000000 },
+    "ideal": { "wife": 4000000, "husband": 4000000 },
+    "received": {
+      "assets": { "wife": 6000000, "husband": 2000000 },
+      "liabilities": { "wife": 0, "husband": 0 },
+      "net": { "wife": 6000000, "husband": 2000000 }
+    },
+    "unallocated": 0,
+    "compensation": { "from": "wife", "to": "husband", "amount": 2000000 }
+  }
+}

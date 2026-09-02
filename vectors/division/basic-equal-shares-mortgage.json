@@ -1,0 +1,115 @@
+{
+  "id": "division/basic-equal-shares-mortgage",
+  "title": "Равные доли, квартира с ипотекой супруге, автомобиль супругу, долг пропорционально",
+  "description": "Базовый сценарий: два общих актива, один общий долг (ипотека, расходование на нужды семьи доказано). Квартира передаётся супруге, автомобиль — супругу, остаток ипотеки делится пропорционально долям 1/2. Проверяет состав массы, идеальные доли, распределение долга и компенсацию.",
+  "legal_basis": [
+    "ст. 34, 38, 39 СК РФ",
+    "п. 3 ст. 39 СК РФ — общие долги пропорционально присуждённым долям",
+    "п. 15 Постановления Пленума ВС РФ от 05.11.1998 № 15 — учёт общих долгов при разделе"
+  ],
+  "kind": "division",
+  "status": "draft",
+  "source_note": "Синтетический кейс. Ожидаемые значения рассчитаны вручную, требуют подтверждения юристом.",
+  "input": {
+    "scenario_id": "s-claim",
+    "case": {
+      "schema_version": 2,
+      "regime": "ru_community_property",
+      "facts": {
+        "marriage": { "registered_at": "2015-06-20", "place": null, "act_number": null },
+        "separated_at": "2024-03-01",
+        "dissolved_at": "2024-09-15",
+        "dissolution": { "basis": "court", "court": null, "decision_number": null, "decision_date": "2024-09-15" },
+        "contract": { "exists": false },
+        "agreement": { "exists": false },
+        "parties": { "wife_person_guid": null, "husband_person_guid": null, "our_client": "husband", "plaintiff": "husband" },
+        "children": [],
+        "limitation": { "violation_known_at": null, "override_deadline": null, "note": null }
+      },
+      "assets": [
+        {
+          "id": "a-flat",
+          "kind": "apartment",
+          "title": "Квартира",
+          "title_holder": "wife",
+          "acquired_at": "2018-05-10",
+          "funding": { "common": 7000000, "loan": 3000000 },
+          "encumbrance_liability_ids": ["l-mortgage"],
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-flat-appraiser", "type": "appraiser", "amount": 10000000, "currency": "RUB", "valued_at": "2025-01-15" }
+          ]
+        },
+        {
+          "id": "a-car",
+          "kind": "vehicle",
+          "title": "Автомобиль",
+          "title_holder": "husband",
+          "acquired_at": "2021-03-01",
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          },
+          "valuations": [
+            { "id": "v-car-appraiser", "type": "appraiser", "amount": 2000000, "currency": "RUB", "valued_at": "2025-01-15" }
+          ]
+        }
+      ],
+      "liabilities": [
+        {
+          "id": "l-mortgage",
+          "kind": "mortgage",
+          "title": "Ипотечный кредит",
+          "creditor_name": "Банк",
+          "borrower": "both",
+          "outstanding": { "amount": 3000000, "at": "2025-01-15" },
+          "currency": "RUB",
+          "linked_asset_id": "a-flat",
+          "family_purpose": { "status": "proven" },
+          "positions": {
+            "wife": { "position": "common" },
+            "husband": { "position": "common" }
+          }
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "s-claim",
+          "title": "Иск супруга",
+          "kind": "claim",
+          "is_primary": true,
+          "wife_share": 0.5,
+          "valuation_policy": "per_item",
+          "asset_items": [
+            { "asset_id": "a-flat", "include": true, "valuation_id": "v-flat-appraiser", "assigned_to": "wife" },
+            { "asset_id": "a-car", "include": true, "valuation_id": "v-car-appraiser", "assigned_to": "husband" }
+          ],
+          "liability_items": [
+            { "liability_id": "l-mortgage", "include": true, "treat_as_common": true, "allocation": "proportional" }
+          ],
+          "claim": {
+            "plaintiff": "husband",
+            "divorce_claimed": false,
+            "prior_right_established": false,
+            "injunction_requested": false,
+            "plaintiff_type": "individual"
+          }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "mass": { "assets_common": 12000000, "liabilities_common": 3000000, "net": 9000000 },
+    "ideal": { "wife": 4500000, "husband": 4500000 },
+    "received": {
+      "assets": { "wife": 10000000, "husband": 2000000 },
+      "liabilities": { "wife": 1500000, "husband": 1500000 },
+      "net": { "wife": 8500000, "husband": 500000 }
+    },
+    "unallocated": 0,
+    "compensation": { "from": "wife", "to": "husband", "amount": 4000000 }
+  }
+}

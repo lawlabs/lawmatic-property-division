@@ -1,0 +1,648 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lawlabs.github.io/lawmatic-property-division/schema/marital-property.v2.schema.json",
+  "title": "Marital Property Case v2",
+  "description": "Документ дела о разделе общего имущества супругов. Один и тот же JSON хранится в файле .divorce (LawMatic Divorce) и в context_json.marital_property дела Legalic. Всё вычисляемое (масса, доли, компенсация, цена иска, пошлина) в документе не хранится.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "regime", "facts", "assets", "liabilities", "scenarios"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "regime": {
+      "description": "Правовой режим расчёта. Пока поддерживается только законный режим совместной собственности по СК РФ; поле зарезервировано под другие юрисдикции.",
+      "type": "string",
+      "enum": ["ru_community_property"]
+    },
+    "meta": { "$ref": "#/$defs/Meta" },
+    "facts": { "$ref": "#/$defs/FamilyFacts" },
+    "assets": { "type": "array", "items": { "$ref": "#/$defs/Asset" } },
+    "liabilities": { "type": "array", "items": { "$ref": "#/$defs/Liability" } },
+    "scenarios": { "type": "array", "items": { "$ref": "#/$defs/Scenario" } },
+    "court_case": { "anyOf": [{ "$ref": "#/$defs/CourtCase" }, { "type": "null" }] },
+    "ui": {
+      "description": "Настройки конкретного приложения (виджеты, зум таймлайна и т.п.). Движок это поле игнорирует.",
+      "type": "object"
+    },
+    "extensions": {
+      "description": "Расширения, не описанные спецификацией. Движок это поле игнорирует.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "Date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Дата в формате ГГГГ-ММ-ДД"
+    },
+    "DateOrNull": { "anyOf": [{ "$ref": "#/$defs/Date" }, { "type": "null" }] },
+    "DateTime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "Guid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$"
+    },
+    "GuidOrNull": { "anyOf": [{ "$ref": "#/$defs/Guid" }, { "type": "null" }] },
+    "Id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "StringOrNull": { "type": ["string", "null"] },
+    "NumberOrNull": { "type": ["number", "null"] },
+    "Ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+    "Side": { "type": "string", "enum": ["wife", "husband"] },
+    "SideOrNull": { "anyOf": [{ "$ref": "#/$defs/Side" }, { "type": "null" }] },
+    "Currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "Код валюты ISO 4217" },
+
+    "Meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exported_at": { "anyOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+        "generated_by": { "$ref": "#/$defs/StringOrNull" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "system": { "type": "string", "enum": ["legalic", "lawmatic_divorce", "other"] },
+            "case_guid": { "$ref": "#/$defs/GuidOrNull" },
+            "usn": { "type": ["integer", "null"], "description": "Update sequence number дела в Legalic на момент экспорта — для оптимистической блокировки" }
+          }
+        }
+      }
+    },
+
+    "FamilyFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marriage", "separated_at", "dissolved_at", "parties", "children"],
+      "properties": {
+        "marriage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["registered_at"],
+          "properties": {
+            "registered_at": { "$ref": "#/$defs/DateOrNull" },
+            "place": { "$ref": "#/$defs/StringOrNull" },
+            "act_number": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "separated_at": {
+          "description": "Дата фактического прекращения семейных отношений (п. 4 ст. 38 СК РФ). Граница массы общего имущества.",
+          "$ref": "#/$defs/DateOrNull"
+        },
+        "dissolved_at": { "description": "Дата расторжения брака", "$ref": "#/$defs/DateOrNull" },
+        "dissolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "basis": { "type": ["string", "null"], "enum": ["zags", "court", null] },
+            "court": { "$ref": "#/$defs/StringOrNull" },
+            "decision_number": { "$ref": "#/$defs/StringOrNull" },
+            "decision_date": { "$ref": "#/$defs/DateOrNull" }
+          }
+        },
+        "contract": {
+          "description": "Брачный договор (ст. 40–44 СК РФ)",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exists"],
+          "properties": {
+            "exists": { "type": "boolean" },
+            "date": { "$ref": "#/$defs/DateOrNull" },
+            "notary": { "$ref": "#/$defs/StringOrNull" },
+            "regime_note": { "$ref": "#/$defs/StringOrNull" },
+            "file_guid": { "$ref": "#/$defs/GuidOrNull" }
+          }
+        },
+        "agreement": {
+          "description": "Соглашение о разделе имущества (п. 2 ст. 38 СК РФ, нотариальная форма)",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exists"],
+          "properties": {
+            "exists": { "type": "boolean" },
+            "notarized": { "type": ["boolean", "null"] },
+            "date": { "$ref": "#/$defs/DateOrNull" },
+            "asset_ids": { "type": "array", "items": { "$ref": "#/$defs/Id" } },
+            "file_guid": { "$ref": "#/$defs/GuidOrNull" }
+          }
+        },
+        "parties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["our_client", "plaintiff"],
+          "properties": {
+            "wife_person_guid": { "$ref": "#/$defs/GuidOrNull" },
+            "husband_person_guid": { "$ref": "#/$defs/GuidOrNull" },
+            "our_client": { "$ref": "#/$defs/SideOrNull" },
+            "plaintiff": { "$ref": "#/$defs/SideOrNull" }
+          }
+        },
+        "persons": {
+          "description": "Локальная копия реквизитов сторон для документов (в Legalic источник — карточки контактов по guid)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wife": { "$ref": "#/$defs/PersonDetails" },
+            "husband": { "$ref": "#/$defs/PersonDetails" }
+          }
+        },
+        "representatives": { "type": "array", "items": { "$ref": "#/$defs/Representative" } },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/Child" } },
+        "limitation": {
+          "description": "Срок исковой давности (п. 7 ст. 38 СК РФ, п. 19 Пленума ВС № 15)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "violation_known_at": { "description": "Дата, когда сторона узнала или должна была узнать о нарушении права", "$ref": "#/$defs/DateOrNull" },
+            "override_deadline": { "description": "Ручная дата окончания срока, если юрист считает иначе", "$ref": "#/$defs/DateOrNull" },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        }
+      }
+    },
+
+    "PersonDetails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "full_name": { "$ref": "#/$defs/StringOrNull" },
+        "birth_date": { "$ref": "#/$defs/DateOrNull" },
+        "birth_place": { "$ref": "#/$defs/StringOrNull" },
+        "passport": { "$ref": "#/$defs/StringOrNull" },
+        "inn": { "$ref": "#/$defs/StringOrNull" },
+        "snils": { "$ref": "#/$defs/StringOrNull" },
+        "address": { "$ref": "#/$defs/StringOrNull" },
+        "phone": { "$ref": "#/$defs/StringOrNull" },
+        "email": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "Representative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["side"],
+      "properties": {
+        "side": { "$ref": "#/$defs/Side" },
+        "person_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "full_name": { "$ref": "#/$defs/StringOrNull" },
+        "basis": { "type": ["string", "null"], "enum": ["attorney", "poa", null] },
+        "poa_number": { "$ref": "#/$defs/StringOrNull" },
+        "poa_date": { "$ref": "#/$defs/DateOrNull" },
+        "poa_expiry": { "$ref": "#/$defs/DateOrNull" }
+      }
+    },
+
+    "Child": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "person_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "name": { "type": "string" },
+        "birth_date": { "$ref": "#/$defs/DateOrNull" },
+        "residence": { "type": ["string", "null"], "enum": ["mother", "father", "disputed", null] },
+        "disability": { "type": ["boolean", "null"] },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "AssetKind": {
+      "type": "string",
+      "enum": [
+        "apartment", "house", "land", "nonresidential", "garage", "parking",
+        "vehicle", "other_vehicle",
+        "account", "deposit", "securities", "business_share", "sole_proprietor",
+        "crypto", "receivable", "insurance", "pension",
+        "luxury", "household", "improvements", "other"
+      ]
+    },
+
+    "Position": {
+      "description": "Позиция стороны по правовому режиму объекта или долга",
+      "type": "string",
+      "enum": ["common", "personal_wife", "personal_husband", "partly_personal", "excluded", "disputed"]
+    },
+
+    "TransferTarget": {
+      "type": "string",
+      "enum": ["wife", "husband", "joint_shares", "sale", "court", "children"]
+    },
+
+    "SidePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": { "$ref": "#/$defs/Position" },
+        "ground": { "description": "Обоснование позиции (свободный текст, со ссылками на доказательства)", "$ref": "#/$defs/StringOrNull" },
+        "claimed_personal_share": { "description": "Для partly_personal: доля личных вложений 0..1 по мнению стороны", "anyOf": [{ "$ref": "#/$defs/Ratio" }, { "type": "null" }] },
+        "proposed_to": { "anyOf": [{ "$ref": "#/$defs/TransferTarget" }, { "type": "null" }] }
+      }
+    },
+
+    "Valuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "amount", "currency"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "type": {
+          "type": "string",
+          "enum": ["party_wife", "party_husband", "market_reference", "appraiser", "expert", "court", "cadastral", "sale_price", "settlement"]
+        },
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "$ref": "#/$defs/Currency" },
+        "fx_rate": { "description": "Курс ЦБ РФ к рублю на fx_date, если currency != RUB", "anyOf": [{ "type": "number", "exclusiveMinimum": 0 }, { "type": "null" }] },
+        "fx_date": { "$ref": "#/$defs/DateOrNull" },
+        "valued_at": { "description": "Дата, на которую определена стоимость", "$ref": "#/$defs/DateOrNull" },
+        "source": { "$ref": "#/$defs/StringOrNull" },
+        "author_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "file_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "accepted_by_court": { "type": ["boolean", "null"] },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "status"],
+      "properties": {
+        "title": { "type": "string" },
+        "document_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "file_url": { "$ref": "#/$defs/StringOrNull" },
+        "status": { "type": "string", "enum": ["confirmed", "pending", "missing"] },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "AssetEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "kind"],
+      "properties": {
+        "at": { "$ref": "#/$defs/Date" },
+        "kind": { "type": "string", "enum": ["purchase", "registration", "mortgage", "repair", "sale", "expertise", "court_order", "other"] },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "Asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "title_holder", "positions", "valuations"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "kind": { "$ref": "#/$defs/AssetKind" },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "$ref": "#/$defs/StringOrNull" },
+        "identifiers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cadastral": { "$ref": "#/$defs/StringOrNull" },
+            "address": { "$ref": "#/$defs/StringOrNull" },
+            "area_sqm": { "$ref": "#/$defs/NumberOrNull" },
+            "vin": { "$ref": "#/$defs/StringOrNull" },
+            "plate": { "$ref": "#/$defs/StringOrNull" },
+            "year": { "type": ["integer", "null"] },
+            "account_mask": { "$ref": "#/$defs/StringOrNull" },
+            "bank": { "$ref": "#/$defs/StringOrNull" },
+            "inn": { "$ref": "#/$defs/StringOrNull" },
+            "ogrn": { "$ref": "#/$defs/StringOrNull" },
+            "share_pct": { "$ref": "#/$defs/NumberOrNull" },
+            "other": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "title_holder": { "type": "string", "enum": ["wife", "husband", "joint", "third_party", "child"] },
+        "holder_person_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "acquired_at": { "$ref": "#/$defs/DateOrNull" },
+        "acquisition_basis": { "$ref": "#/$defs/StringOrNull" },
+        "acquisition_price": { "$ref": "#/$defs/NumberOrNull" },
+        "funding": {
+          "description": "Источники средств на приобретение, в рублях. Используются для расчёта доли личных вложений и долей детей по маткапиталу.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "common": { "$ref": "#/$defs/NumberOrNull" },
+            "personal_wife": { "$ref": "#/$defs/NumberOrNull" },
+            "personal_husband": { "$ref": "#/$defs/NumberOrNull" },
+            "maternity_capital": { "$ref": "#/$defs/NumberOrNull" },
+            "loan": { "$ref": "#/$defs/NumberOrNull" },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "improvements": {
+          "description": "Вложения в личное имущество за счёт общих средств (ст. 37 СК РФ)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "by_common_funds": { "type": ["boolean", "null"] },
+            "amount": { "$ref": "#/$defs/NumberOrNull" },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "disposed": {
+          "description": "Отчуждение объекта одним супругом (п. 16 Пленума ВС № 15 — учёт стоимости при разделе)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "at": { "$ref": "#/$defs/DateOrNull" },
+            "by": { "$ref": "#/$defs/SideOrNull" },
+            "price": { "$ref": "#/$defs/NumberOrNull" },
+            "buyer": { "$ref": "#/$defs/StringOrNull" },
+            "spouse_consent": { "type": ["boolean", "null"] },
+            "proceeds_use": { "type": ["string", "null"], "enum": ["family", "personal", "unknown", null] },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "encumbrance_liability_ids": { "type": "array", "items": { "$ref": "#/$defs/Id" } },
+        "positions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wife", "husband"],
+          "properties": {
+            "wife": { "$ref": "#/$defs/SidePosition" },
+            "husband": { "$ref": "#/$defs/SidePosition" }
+          }
+        },
+        "valuations": { "type": "array", "items": { "$ref": "#/$defs/Valuation" } },
+        "children_share_override": { "description": "Ручная доля детей 0..1, если расчёт по маткапиталу не подходит", "anyOf": [{ "$ref": "#/$defs/Ratio" }, { "type": "null" }] },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" } },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/AssetEvent" } },
+        "risk": { "type": ["string", "null"], "enum": ["high", "medium", "low", null] },
+        "notes": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "Liability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "title", "borrower", "outstanding", "currency", "family_purpose", "positions"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "kind": { "type": "string", "enum": ["mortgage", "consumer_loan", "car_loan", "private_loan", "credit_card", "tax", "other"] },
+        "title": { "type": "string", "minLength": 1 },
+        "creditor_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "creditor_name": { "$ref": "#/$defs/StringOrNull" },
+        "contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "number": { "$ref": "#/$defs/StringOrNull" },
+            "date": { "$ref": "#/$defs/DateOrNull" }
+          }
+        },
+        "borrower": { "type": "string", "enum": ["wife", "husband", "both"] },
+        "co_borrower_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "principal": { "$ref": "#/$defs/NumberOrNull" },
+        "outstanding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "at"],
+          "properties": {
+            "amount": { "type": "number", "minimum": 0 },
+            "at": { "$ref": "#/$defs/DateOrNull" }
+          }
+        },
+        "currency": { "$ref": "#/$defs/Currency" },
+        "fx_rate": { "anyOf": [{ "type": "number", "exclusiveMinimum": 0 }, { "type": "null" }] },
+        "fx_date": { "$ref": "#/$defs/DateOrNull" },
+        "monthly_payment": { "$ref": "#/$defs/NumberOrNull" },
+        "maturity_at": { "$ref": "#/$defs/DateOrNull" },
+        "linked_asset_id": { "anyOf": [{ "$ref": "#/$defs/Id" }, { "type": "null" }] },
+        "family_purpose": {
+          "description": "Расходование на нужды семьи (п. 2 ст. 45 СК РФ). Презумпции общности долга нет; доказывает тот, кто требует признать долг общим.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "claimed_by": { "$ref": "#/$defs/SideOrNull" },
+            "status": { "type": "string", "enum": ["proven", "disputed", "not_claimed"] },
+            "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" } },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "positions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wife", "husband"],
+          "properties": {
+            "wife": { "$ref": "#/$defs/LiabilitySidePosition" },
+            "husband": { "$ref": "#/$defs/LiabilitySidePosition" }
+          }
+        },
+        "paid_after_separation": {
+          "description": "Платежи одного супруга после прекращения отношений — основание регресса (п. 2 ст. 325 ГК РФ)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["by", "amount"],
+            "properties": {
+              "by": { "$ref": "#/$defs/Side" },
+              "amount": { "type": "number", "minimum": 0 },
+              "at": { "$ref": "#/$defs/DateOrNull" },
+              "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" } }
+            }
+          }
+        },
+        "court_decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "recognized_common": { "type": ["boolean", "null"] },
+            "share_wife": { "anyOf": [{ "$ref": "#/$defs/Ratio" }, { "type": "null" }] },
+            "note": { "$ref": "#/$defs/StringOrNull" }
+          }
+        },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" } },
+        "notes": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "LiabilitySidePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": { "type": "string", "enum": ["common", "personal_wife", "personal_husband", "disputed"] },
+        "ground": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "Scenario": {
+      "description": "Вариант раздела: позиция истца, встречный иск, проект мирового, вариант по экспертизе, решение суда. Всё вычисляемое считается движком из сценария и не хранится.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "kind", "is_primary", "wife_share", "valuation_policy", "asset_items", "liability_items"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["claim", "counterclaim", "settlement", "expert", "court_decision", "appeal", "negotiation", "other"] },
+        "is_primary": { "type": "boolean" },
+        "wife_share": { "description": "Доля супруги в общем имуществе; доля супруга = 1 − wife_share (ст. 39 СК РФ)", "$ref": "#/$defs/Ratio" },
+        "deviation_grounds": {
+          "description": "Основания отступления от равенства долей (п. 2 ст. 39 СК РФ). Обязательны при wife_share != 0.5.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["children_interests", "no_income_without_reason", "dissipation", "health", "housing_need", "other"] },
+              "note": { "$ref": "#/$defs/StringOrNull" }
+            }
+          }
+        },
+        "valuation_policy": {
+          "description": "Как выбирать оценку объекта, если в asset_items не указан valuation_id: court_first — суд → экспертиза → оценщик → согласованная → сторона; wife/husband — оценка стороны; blended — среднее оценок сторон; per_item — только явные valuation_id",
+          "type": "string",
+          "enum": ["court_first", "wife", "husband", "blended", "per_item"]
+        },
+        "mass_cutoff": {
+          "description": "Граница массы: до фактического прекращения отношений (по умолчанию) или до расторжения брака",
+          "type": "string",
+          "enum": ["separation", "dissolution"],
+          "default": "separation"
+        },
+        "asset_items": { "type": "array", "items": { "$ref": "#/$defs/ScenarioAssetItem" } },
+        "liability_items": { "type": "array", "items": { "$ref": "#/$defs/ScenarioLiabilityItem" } },
+        "claim": { "$ref": "#/$defs/ScenarioClaim" },
+        "notes": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "ScenarioAssetItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "include"],
+      "properties": {
+        "asset_id": { "$ref": "#/$defs/Id" },
+        "include": { "type": "boolean" },
+        "valuation_id": { "anyOf": [{ "$ref": "#/$defs/Id" }, { "type": "null" }] },
+        "accepted_position": { "anyOf": [{ "$ref": "#/$defs/Position" }, { "type": "null" }] },
+        "personal_share_override": { "anyOf": [{ "$ref": "#/$defs/Ratio" }, { "type": "null" }] },
+        "add_back": { "description": "Для отчуждённого объекта: учесть стоимость за отчуждателем (п. 16 Пленума ВС № 15)", "type": ["boolean", "null"] },
+        "assigned_to": { "anyOf": [{ "$ref": "#/$defs/TransferTarget" }, { "type": "null" }] },
+        "share_ratio": {
+          "description": "Для assigned_to = joint_shares: доли в праве после раздела",
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["wife", "husband"],
+              "properties": {
+                "wife": { "$ref": "#/$defs/Ratio" },
+                "husband": { "$ref": "#/$defs/Ratio" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "ScenarioLiabilityItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["liability_id", "include", "treat_as_common", "allocation"],
+      "properties": {
+        "liability_id": { "$ref": "#/$defs/Id" },
+        "include": { "type": "boolean" },
+        "treat_as_common": { "type": "boolean" },
+        "allocation": {
+          "description": "proportional — пропорционально присуждённым долям (п. 3 ст. 39 СК РФ); wife/husband — целиком на сторону (внутренние отношения супругов, для кредитора они солидарны)",
+          "type": "string",
+          "enum": ["proportional", "wife", "husband"]
+        },
+        "note": { "$ref": "#/$defs/StringOrNull" }
+      }
+    },
+
+    "ScenarioClaim": {
+      "description": "Параметры искового требования для расчёта цены иска, госпошлины и подсудности",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plaintiff": { "$ref": "#/$defs/SideOrNull" },
+        "divorce_claimed": { "type": "boolean", "default": false },
+        "prior_right_established": { "description": "Право собственности истца ранее признано судом — пошлина как по неимущественному требованию (пп. 3 п. 1 ст. 333.20 НК РФ)", "type": "boolean", "default": false },
+        "injunction_requested": { "type": "boolean", "default": false },
+        "plaintiff_type": { "type": "string", "enum": ["individual", "organization"], "default": "individual" },
+        "claim_price_override": { "$ref": "#/$defs/NumberOrNull" },
+        "claim_price_note": { "$ref": "#/$defs/StringOrNull" },
+        "court_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "court_name": { "$ref": "#/$defs/StringOrNull" },
+        "filed_at": { "$ref": "#/$defs/DateOrNull" }
+      }
+    },
+
+    "CourtCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "court": { "$ref": "#/$defs/StringOrNull" },
+        "court_guid": { "$ref": "#/$defs/GuidOrNull" },
+        "case_number": { "$ref": "#/$defs/StringOrNull" },
+        "uid": { "$ref": "#/$defs/StringOrNull" },
+        "judge": { "$ref": "#/$defs/StringOrNull" },
+        "hearings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["at"],
+            "properties": {
+              "at": { "$ref": "#/$defs/DateTime" },
+              "kind": { "type": ["string", "null"], "enum": ["preliminary", "main", "appeal", "cassation", "other", null] },
+              "result": { "$ref": "#/$defs/StringOrNull" },
+              "note": { "$ref": "#/$defs/StringOrNull" }
+            }
+          }
+        },
+        "motions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["injunction", "expertise", "evidence_request", "clarification", "other"] },
+              "filed_at": { "$ref": "#/$defs/DateOrNull" },
+              "status": { "type": ["string", "null"], "enum": ["planned", "filed", "granted", "denied", null] },
+              "note": { "$ref": "#/$defs/StringOrNull" }
+            }
+          }
+        },
+        "expert_reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "at": { "$ref": "#/$defs/DateOrNull" },
+              "expert": { "$ref": "#/$defs/StringOrNull" },
+              "subject": { "$ref": "#/$defs/StringOrNull" },
+              "asset_ids": { "type": "array", "items": { "$ref": "#/$defs/Id" } },
+              "file_guid": { "$ref": "#/$defs/GuidOrNull" }
+            }
+          }
+        },
+        "decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "at": { "$ref": "#/$defs/DateOrNull" },
+            "final_form_at": { "description": "Дата изготовления решения в окончательной форме — от неё месяц на апелляцию (ст. 321 ГПК РФ)", "$ref": "#/$defs/DateOrNull" },
+            "summary": { "$ref": "#/$defs/StringOrNull" },
+            "file_guid": { "$ref": "#/$defs/GuidOrNull" }
+          }
+        },
+        "appeal_deadline_override": { "$ref": "#/$defs/DateOrNull" }
+      }
+    }
+  }
+}
