@@ -95,6 +95,29 @@ export function selectValuation(
   return pickCourtFirst(asset) ?? null;
 }
 
+export function assetValueDetails(
+  asset: Asset,
+  item: ScenarioAssetItem,
+  scenario: Scenario,
+  warnings: string[],
+  options: ComputeOptions,
+): { amount: number; unvalued: boolean } {
+  const valuation = selectValuation(asset, item, scenario, warnings);
+  if (!valuation) {
+    warnings.push("valuation.missing");
+    return { amount: 0, unvalued: true };
+  }
+  const rubles = toRubles(valuation.amount, valuation.currency, valuation.fx_rate);
+  if (rubles == null) {
+    warnings.push("valuation.fx_missing");
+    return { amount: 0, unvalued: true };
+  }
+  if (options.asOf && valuation.valued_at && isAfter(options.asOf, addMonthsSafe(valuation.valued_at, 6))) {
+    warnings.push("valuation.stale");
+  }
+  return { amount: rubles, unvalued: false };
+}
+
 export function assetValueRubles(
   asset: Asset,
   item: ScenarioAssetItem,
@@ -102,20 +125,7 @@ export function assetValueRubles(
   warnings: string[],
   options: ComputeOptions,
 ): number {
-  const valuation = selectValuation(asset, item, scenario, warnings);
-  if (!valuation) {
-    warnings.push("valuation.missing");
-    return 0;
-  }
-  const rubles = toRubles(valuation.amount, valuation.currency, valuation.fx_rate);
-  if (rubles == null) {
-    warnings.push("valuation.fx_missing");
-    return 0;
-  }
-  if (options.asOf && valuation.valued_at && isAfter(options.asOf, addMonthsSafe(valuation.valued_at, 6))) {
-    warnings.push("valuation.stale");
-  }
-  return rubles;
+  return assetValueDetails(asset, item, scenario, warnings, options).amount;
 }
 
 function addMonthsSafe(iso: string, months: number): string {

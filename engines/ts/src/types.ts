@@ -184,6 +184,15 @@ export type Compensation = {
   amount: number;
 };
 
+export type DivisionAssetLine = {
+  asset_id: string;
+  value: number | null;
+  common_part: number;
+  assigned_to: TransferTarget | null;
+  in_mass: boolean;
+  unvalued: boolean;
+};
+
 export type DivisionResult = {
   mass: { assets_common: number; liabilities_common: number; net: number };
   ideal: SideAmounts;
@@ -194,6 +203,7 @@ export type DivisionResult = {
   court_fee: number | null;
   jurisdiction: Jurisdiction | null;
   warnings: string[];
+  asset_lines: DivisionAssetLine[];
 };
 
 export type CourtFeeInput = {

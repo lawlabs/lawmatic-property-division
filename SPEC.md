@@ -96,6 +96,7 @@
 - `received.net[side] = received.assets[side] − received.liabilities[side]`.
 - `compensation`: `diff = received.net.wife − ideal.wife`; если `diff > 0` — `from: wife, to: husband, amount: diff`; если `< 0` — наоборот; `0` — `from/to = null`. При `unallocated > 0` компенсация помечается предварительной (`warnings: division.unallocated_present`).
 - Если `wife_share ≠ 0.5` и `deviation_grounds` пуст — предупреждение `scenario.deviation_without_grounds` (п. 2 ст. 39 СК РФ).
+- Результат содержит `asset_lines[]` — построчная раскладка по объектам сценария: `asset_id`, выбранная стоимость (`value`, `null` если оценка не взята), общая часть (`common_part`), `assigned_to`, `in_mass`, `unvalued`. Таблица, иск и панель итога берут стоимость объекта из этой строки, а не из своей формулы. Swift-движок v2 раскладку не отдаёт; на паритет итоговых сумм это не влияет.
 
 ### 4.4. `claimPrice(case, scenario)` — цена иска (ст. 91 ГПК РФ)
 

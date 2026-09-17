@@ -5,6 +5,7 @@ import type {
   Asset,
   Compensation,
   ComputeOptions,
+  DivisionAssetLine,
   DivisionResult,
   MaritalPropertyCase,
   Scenario,
@@ -12,7 +13,7 @@ import type {
   SideAmounts,
 } from "./types.ts";
 import {
-  assetValueRubles,
+  assetValueDetails,
   childrenShare,
   fundingPersonalShare,
   inMass,
@@ -75,6 +76,7 @@ export function divide(
   const receivedAssets = emptySides();
   let unallocated = 0;
   let claimedByPlaintiff = 0;
+  const assetLines: DivisionAssetLine[] = [];
 
   for (const item of scenario.asset_items) {
     if (!item.include) continue;
@@ -88,15 +90,36 @@ export function divide(
 
     if (cutoff && asset.acquired_at && asset.acquired_at > cutoff) {
       addWarning(warnings, "asset.acquired_after_separation");
-      if (!item.accepted_position) continue;
+      if (!item.accepted_position) {
+        assetLines.push({
+          asset_id: asset.id,
+          value: null,
+          common_part: 0,
+          assigned_to: item.assigned_to ?? null,
+          in_mass: false,
+          unvalued: false,
+        });
+        continue;
+      }
     }
 
     collectAssetWarnings(asset, warnings);
 
     const position = resolvePosition(asset, item, scenario, plaintiff, warnings);
-    if (!inMass(position)) continue;
+    if (!inMass(position)) {
+      assetLines.push({
+        asset_id: asset.id,
+        value: null,
+        common_part: 0,
+        assigned_to: item.assigned_to ?? null,
+        in_mass: false,
+        unvalued: false,
+      });
+      continue;
+    }
 
-    const value = assetValueRubles(asset, item, scenario, warnings, { asOf });
+    const valued = assetValueDetails(asset, item, scenario, warnings, { asOf });
+    const value = valued.unvalued ? null : valued.amount;
     const personal =
       item.personal_share_override ??
       chosenPersonalShare(asset, position, item) ??
@@ -105,8 +128,16 @@ export function divide(
     if (n(asset.funding?.maternity_capital) > 0) {
       addWarning(warnings, "asset.maternity_capital_children_share");
     }
-    const commonPart = value * Math.max(0, 1 - personal - kids);
+    const commonPart = (value ?? 0) * Math.max(0, 1 - personal - kids);
     assetsCommon += commonPart;
+    assetLines.push({
+      asset_id: asset.id,
+      value,
+      common_part: commonPart,
+      assigned_to: item.assigned_to ?? null,
+      in_mass: true,
+      unvalued: valued.unvalued,
+    });
 
     const addBack = Boolean(item.add_back && asset.disposed);
     if (plaintiff && item.assigned_to === plaintiff && !addBack) {
@@ -198,6 +229,7 @@ export function divide(
     court_fee: fee,
     jurisdiction: court,
     warnings,
+    asset_lines: assetLines,
   };
 }
 
